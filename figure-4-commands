@@ -1,0 +1,120 @@
+#
+# Matrix plots
+#
+fancplot -o bonev2017_cn_1mb.chr1.png chr1:1-195mb \
+    -p square bonev2017_cn_1mb.copy.hic -vmax 0.01 -vmin 0 -f
+fancplot -o bonev2017_npc_1mb.chr1.png chr1:1-195mb \
+    -p square bonev2017_npc_1mb.copy.hic -vmax 0.01 -vmin 0 -f
+fancplot -o bonev2017_esc_1mb.chr1.png chr1:1-195mb \
+    -p square bonev2017_esc_1mb.copy.hic -vmax 0.01 -vmin 0 -f
+
+#
+# Compartments
+#
+
+GENOME=/home/kkruse/data/genomes/mm10.ra.fa
+ESC=bonev2017_esc_1mb.hic
+NPC=bonev2017_npc_1mb.hic
+CN=bonev2017_cn_1mb.hic
+
+# ESC
+fanc compartments $ESC bonev2017_esc_1mb.ab \
+    -e bonev2017_esc_1mb.ab.pdf -g $GENOME -tmp \
+    -p 0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 \
+    --enrichment-colormap RdBu_r
+
+# NPC
+fanc compartments $NPC bonev2017_npc_1mb.ab \
+    -e bonev2017_npc_1mb.ab.pdf -g $GENOME -tmp \
+    -p 0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 \
+    --enrichment-colormap RdBu_r
+
+# CN
+fanc compartments $CN bonev2017_cn_1mb.ab \
+    -e bonev2017_cn_1mb.ab.pdf -g $GENOME -tmp \
+    -p 0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 \
+    --enrichment-colormap RdBu_r
+
+
+#
+# Compartment strength
+#
+# ESC
+q fanc compartments $ESC bonev2017_esc_1mb_cs.ab \
+    --compartment-strength bonev2017_esc_1mb.compartment_strength.txt \
+    -g $GENOME -tmp
+
+# NPC
+q fanc compartments $NPC bonev2017_npc_1mb_cs.ab \
+    --compartment-strength bonev2017_npc_1mb.compartment_strength.txt \
+    -g $GENOME -tmp
+
+# CN
+q fanc compartments $CN bonev2017_cn_1mb_cs.ab \
+    --compartment-strength bonev2017_cn_1mb.compartment_strength.txt \
+    -g $GENOME -tmp
+
+
+
+#
+# Insulation scores
+#
+ESC=bonev2017_esc_10kb.hic
+NPC=bonev2017_npc_10kb.hic
+CN=bonev2017_cn_10kb.hic
+
+q fanc insulation -tmp -w 50kb 75kb 100kb 250kb 500kb 1mb 2mb -g \
+    $ESC bonev2017_esc_10kb.ins
+
+q fanc insulation -tmp -w 50kb 75kb 100kb 250kb 500kb 1mb 2mb -g \
+    $NPC bonev2017_npc_10kb.ins
+
+q fanc insulation -tmp -w 50kb 75kb 100kb 250kb 500kb 1mb 2mb -g \
+    $CN bonev2017_cn_10kb.ins
+
+
+#
+# Boundaries
+#
+q fanc boundaries -w 100000 -s 1.0 bonev2017_cn_10kb.ins bonev2017_cn_10kb.ins.boundaries.bed
+q fanc boundaries -w 100000 -s 1.0 bonev2017_esc_10kb.ins bonev2017_esc_10kb.ins.boundaries.bed
+q fanc boundaries -w 100000 -s 1.0 bonev2017_npc_10kb.ins bonev2017_npc_10kb.ins.boundaries.bed
+
+#
+# Insulation score differences
+#
+fanc compare -tmp -c difference \
+    bonev2017_esc_10kb.ins bonev2017_npc_10kb.ins \
+    bonev2017_esc_minus_npc_10kb.ins
+
+fanc compare -tmp -c difference \
+    bonev2017_esc_10kb.ins bonev2017_cn_10kb.ins \
+    bonev2017_esc_minus_cn_10kb.ins
+
+fanc compare -tmp -c difference \
+    bonev2017_npc_10kb.ins bonev2017_cn_10kb.ins \
+    bonev2017_npc_minus_cn_10kb.ins
+
+
+#
+# Sample boundary plots
+#
+ESC=bonev2017_esc_10kb.hic
+CN=bonev2017_cn_10kb.hic
+CMP=bonev2017_cn_minus_esc_10kb.hic.cmp
+INS_ESC=bonev2017_esc_10kb.ins
+INS_CN=bonev2017_cn_10kb.ins
+INS_DIFF=bonev2017_esc_minus_cn_10kb.ins
+GENES=gencode.vM12.annotation_sorted.gtf.gz
+
+fancplot --width 4 -w 1000000 \
+  --tick-locations 167900000 168300000 168700000 \
+  -o pbx1.pdf \
+  chr1:168340001-168350000 \
+  -p triangular -vmin 0 -vmax 0.02 -m 500kb $ESC \
+  -p triangular -C --hide-x -vmin 0 -vmax 0.02 -m 500kb $CN \
+  -p triangular --hide-x -vmin -0.01 -vmax 0.01 -m 500kb -c PiYG $CMP \
+  -p scores -r 75000 2000000 --hide-x -g -l -c bwr -vmin -1 -vmax 1 --aspect-ratio 0.1 $INS_ESC \
+  -p scores -C -r 75000 2000000 --hide-x -g -l -c bwr -vmin -1 -vmax 1 --aspect-ratio 0.1 $INS_CN \
+  -p scores -r 75000 2000000 -g -l -c BrBG -vmin -0.7 -vmax 0.7 --aspect-ratio 0.1 $INS_DIFF \
+  -p gene $GENES --aspect-ratio 0.3 --group-by "gene_id" -sq --label-field gene_name -a 0
