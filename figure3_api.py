@@ -1,6 +1,7 @@
 import os
 import fanc
 import fanc.plotting as fancplot
+import fanc.plotting.statistics as fanc_stats_plot
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -12,8 +13,8 @@ output_folder = './'
 genome_file = 'hg19.ra.fa'
 tads_file = 'rao2014_gm12878_arrowhead_domains_hg19.bed'
 loops_file = 'rao2014_gm12878_hiccups_loops_hg19.bedpe'
-insulation_file = 'insulation/rao2014_gm12878_10kb.ii'
-directionality_file = 'directionality/rao2014_gm12878_10kb.di'
+insulation_file = 'rao2014_gm12878_10kb.ii'
+directionality_file = 'rao2014_gm12878_10kb.di'
 genes_file = 'gencode.v19.annotation_sorted.gtf.gz'
 ctcf_file = 'stanford_ctcf_nc_FE.bw'
 ctcf = fanc.load(ctcf_file)
@@ -108,28 +109,26 @@ ax_genes = plt.subplot(gs[gene_row, col_right1])
 p_hic = fancplot.SquareMatrixPlot(hic_10kb, norm='lin', vmin=0.0, vmax=0.03, ax=ax_hic, cax=cax_hic,
                                   draw_tick_legend=False, draw_minor_ticks=False)
 p_hic.plot(plotting_region)
+
+# due to limited space we only want labels at the start and end of the plotting window
 ax_hic.set_xticks([plotting_region.start, plotting_region.end])
 ax_hic.set_yticks([plotting_region.start, plotting_region.end])
 
+# similarly, we only want to label the min and max values on the colorbar
 p_hic.colorbar.set_ticks([0, 0.03])
 p_hic.colorbar.set_label("Normalised contact\nprobability")
 
+
 # 2. Distance decay plot
-expected_chr1 = hic_10kb.expected_values('chr1')
-bin_size = hic_10kb.bin_size
-distances = [x + bin_size for x in range(0, bin_size * len(expected_chr1), bin_size)]
+fanc_stats_plot.distance_decay_plot(hic_10kb, chromosome='chr1', ax=ax_expected, tight=False)
 
-ax_expected.plot(distances, expected_chr1, color='grey')
-ax_expected.set_yscale('log')
-ax_expected.set_xscale('log')
-ax_expected.set_xticks([10000, 1000000, 100000000])
-ax_expected.set_ylabel('Normalised contact\nprobability')
-ax_expected.set_xlabel('Distance (bp)')
 
-# 3. Hi-C O/E plo
+# 3. Hi-C O/E plot
 p_oe = fancplot.SquareMatrixPlot(hic_10kb, oe=True, log=True, norm='lin', vmin=-2, vmax=2, ax=ax_oe, cax=cax_oe,
                                  colormap='RdBu_r', draw_tick_legend=False, draw_minor_ticks=False)
 p_oe.plot(plotting_region)
+
+# adjust label locations for neater plot
 ax_oe.set_xticks([plotting_region.start, plotting_region.end])
 ax_oe.set_yticks([plotting_region.start, plotting_region.end])
 p_oe.colorbar.set_ticks([-2, 0, 2])
@@ -143,6 +142,8 @@ else:
 p_ab = fancplot.SquareMatrixPlot(ab, norm='lin', vmin=-1, vmax=1, colormap='bwr', ax=ax_ab, cax=cax_ab,
                                  draw_tick_legend=False, draw_minor_ticks=False)
 p_ab.plot('chr1')
+
+# adjust label locations for neater plot
 ax_ab.set_xticks([1, 249000000])
 ax_ab.set_xticklabels([])
 ax_ab.set_yticks([1, 249000000])
@@ -177,35 +178,12 @@ ev_ax.spines['top'].set_visible(False)
 ev_ax.set_xticks([1, 249000000])
 ev_ax.set_ylabel('EV')
 
-im_ab = ax_ab_enrichment.imshow(ab_enrichment_matrix, cmap='RdBu_r', vmin=-2, vmax=2,
-                                interpolation='nearest', aspect='auto')
-cb_ab = plt.colorbar(im_ab, cax=cax_ab_enrichment)
-cb_ab.set_label('Average log2-O/E\ncontacts')
-cb_ab.set_ticks([-2, 0, 2])
-ax_ab_enrichment.set_xticks([0, ab_enrichment_matrix.shape[1] - 1])
-ax_ab_enrichment.set_xticklabels(['active', 'inactive'])
-xlabels = ax_ab_enrichment.get_xticklabels()
-xlabels[0].set_horizontalalignment('left')
-xlabels[1].set_horizontalalignment('right')
-
-ax_ab_enrichment.set_yticks([0, ab_enrichment_matrix.shape[1] - 1])
-ax_ab_enrichment.set_yticklabels(['active', 'inactive'], rotation=90)
-ylabels = ax_ab_enrichment.get_yticklabels()
-ylabels[0].set_verticalalignment('top')
-ylabels[1].set_verticalalignment('bottom')
-
-# 6.A enrichment percentile cutoffs
-pos = list(range(ab_enrichment_matrix.shape[1]))
-barplot_ax.bar(pos, cutoffs, color='grey', width=1)
+fanc_stats_plot.saddle_plot(ab_enrichment_matrix, cutoffs, colormap='RdBu_r',
+                            vmin=-2, vmax=2, only_gc=False, fig=fig,
+                            axes=[ax_ab_enrichment, barplot_ax, cax_ab_enrichment])
+# nicer tick placement than default:
 barplot_ax.set_yticks([-0.2, 0, 0.2])
-barplot_ax.set_xlim(ax_ab_enrichment.get_xlim())
-barplot_ax.get_xaxis().set_visible(False)
-barplot_ax.spines['right'].set_visible(False)
-barplot_ax.spines['top'].set_visible(False)
-barplot_ax.spines['bottom'].set_visible(False)
-barplot_ax.yaxis.set_ticks_position('left')
-barplot_ax.xaxis.set_ticks_position('none')
-barplot_ax.set_ylabel("EV percentile\ncutoffs")
+
 
 # 6. TAD aggregate plot
 tads = fanc.load(tads_file)
@@ -215,16 +193,10 @@ if not os.path.exists(tad_am_output_file):
 else:
     tad_am = fanc.AggregateMatrix(tad_am_output_file)
 
-tam = tad_am.matrix()
-im_ab = ax_aggregate_tads.imshow(tam, cmap='bwr', vmin=-1, vmax=1,
-                                 interpolation='nearest', aspect='auto')
-#cb_ab = plt.colorbar(im_ab, cax=cax_aggregate_tads)
-ylim = ax_aggregate_tads.get_ylim()
-ax_aggregate_tads.set_xticks([tam.shape[0]/3, tam.shape[0]*2/3])
-ax_aggregate_tads.set_yticks([tam.shape[0]/3, tam.shape[0]*2/3])
-ax_aggregate_tads.set_xticklabels([])
-ax_aggregate_tads.set_yticklabels([])
-ax_aggregate_tads.set_ylim(ylim)
+fanc_stats_plot.aggregate_plot(tad_am, labels=None, vmin=-1, vmax=1,
+                               oe=False, log=False, colormap='bwr', ax=ax_aggregate_tads,
+                               relative_label_locations=(1/3, 2/3), plot_colorbar=False)
+
 
 # 7. Loop aggregate plot
 loops = fanc.load(loops_file)
@@ -234,20 +206,10 @@ if not os.path.exists(loop_am_output_file):
 else:
     loop_am = fanc.AggregateMatrix(loop_am_output_file)
 
-
-lam = loop_am.matrix()
-im_ab = ax_aggregate_loops.imshow(lam, cmap='bwr', vmin=-1, vmax=1,
-                                  interpolation='nearest', aspect='auto')
-cb_loops = plt.colorbar(im_ab, cax=cax_aggregate_loops)
-cb_loops.set_label('Average log2-O/E')
-cb_loops.set_ticks([-1, 0, 1])
-
-ylim = ax_aggregate_loops.get_ylim()
-ax_aggregate_loops.set_xticks([lam.shape[0]/2])
-ax_aggregate_loops.set_yticks([lam.shape[0]/2])
-ax_aggregate_loops.set_xticklabels(['loop anchor'])
-ax_aggregate_loops.set_yticklabels([''])
-ax_aggregate_loops.set_ylim(ylim)
+fanc_stats_plot.aggregate_plot(loop_am, labels=('loop anchor',), vmin=-1, vmax=1,
+                               oe=False, log=False, colormap='bwr', ax=ax_aggregate_loops,
+                               relative_label_locations=(0.5,), cax=cax_aggregate_loops)
+ax_aggregate_loops.set_yticklabels([])
 
 # 8. Hi-C plot triangular
 p_hic_triangular = fancplot.HicPlot(hic_10kb, norm='lin', ax=ax_hic_triangular, cax=cax_hic_triangular,
@@ -265,9 +227,9 @@ p_hic_triangular.colorbar.set_label("Normalised\ncontact probability")
 insulation = fanc.load(insulation_file)
 
 p_ins_array = fancplot.GenomicVectorArrayPlot(insulation, y_scale='log', ax=ax_ins_array,
-                                          colormap='bwr', cax=cax_ins_array,
-                                          vmin=-1, vmax=1, draw_tick_legend=False,
-                                          draw_minor_ticks=False, draw_tick_labels=False)
+                                              colormap='bwr', cax=cax_ins_array,
+                                              vmin=-1, vmax=1, draw_tick_legend=False,
+                                              draw_minor_ticks=False, draw_tick_labels=False)
 p_ins_array.plot(triangular_plotting_region)
 p_ins_array.colorbar.set_label('Insulation score')
 
@@ -282,7 +244,7 @@ ax_ins_array.set_ylabel('Window\nsize (bp)')
 insulation_single = insulation.score_regions(10)
 
 p_ins = fancplot.LinePlot(insulation_single, ax=ax_ins, style='mid', plot_kwargs={'color': '#79C7C5'},
-                      draw_tick_legend=False, draw_minor_ticks=False)
+                          draw_tick_legend=False, draw_minor_ticks=False)
 p_ins.plot(triangular_plotting_region)
 ax_ins.set_xticks([triangular_plotting_region.start,
                    triangular_plotting_region.center,
@@ -294,10 +256,10 @@ directionality = fanc.load(directionality_file)
 
 
 p_dir_array = fancplot.GenomicVectorArrayPlot(directionality, y_scale='log', ax=ax_dir_array,
-                                          colormap='PuOr', cax=cax_dir_array,
-                                          vmin=-0.1, vmax=0.1,
-                                          draw_tick_legend=False,
-                                          draw_minor_ticks=False, draw_tick_labels=False)
+                                              colormap='PuOr', cax=cax_dir_array,
+                                              vmin=-0.1, vmax=0.1,
+                                              draw_tick_legend=False,
+                                              draw_minor_ticks=False, draw_tick_labels=False)
 p_dir_array.plot(triangular_plotting_region)
 p_dir_array.colorbar.set_label('Directionality index')
 
@@ -310,7 +272,7 @@ ax_dir_array.set_ylabel('Window\nsize (bp)')
 directionality_single = directionality.score_regions(1000000)
 
 p_dir = fancplot.LinePlot(directionality_single, ax=ax_dir, style='mid', plot_kwargs={'color': '#79C7C5'},
-                      draw_tick_legend=False, draw_minor_ticks=False)
+                          draw_tick_legend=False, draw_minor_ticks=False)
 p_dir.plot(triangular_plotting_region)
 ax_dir.set_xticks([triangular_plotting_region.start,
                    triangular_plotting_region.center,
@@ -320,16 +282,16 @@ ax_dir.set_ylabel('Directionality\nindex 1Mb')
 # 13. Genes
 genes = fanc.load(genes_file)
 p_genes = fancplot.GenePlot(genes, feature_types=('exon',),
-                        color_score=False, box_height=0.9, show_labels=True,
-                        label_field='gene_name', font_size=7, arrow_size=0, show_arrows=False,
-                        line_width=1, group_by='gene_id', draw_tick_legend=False,
-                        draw_tick_labels=True, draw_minor_ticks=False,
-                        ax=ax_genes, squash=True, min_gene_size=3000,
-                        collapse=False,
-                        include={
-                            'gene_type': {'processed_transcript', 'rRNA',
-                                          'protein_coding', 'IG_V_gene'}
-                        })
+                            color_score=False, box_height=0.9, show_labels=True,
+                            label_field='gene_name', font_size=7, arrow_size=0, show_arrows=False,
+                            line_width=1, group_by='gene_id', draw_tick_legend=False,
+                            draw_tick_labels=True, draw_minor_ticks=False,
+                            ax=ax_genes, squash=True, min_gene_size=3000,
+                            collapse=False,
+                            include={
+                                'gene_type': {'processed_transcript', 'rRNA',
+                                              'protein_coding', 'IG_V_gene'}
+                            })
 p_genes.plot(triangular_plotting_region)
 ax_genes.set_xticks([triangular_plotting_region.start,
                      triangular_plotting_region.center,
