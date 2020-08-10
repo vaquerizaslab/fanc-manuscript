@@ -8,6 +8,9 @@ from matplotlib.gridspec import GridSpec
 from fanc.plotting.base_plotter import GenomeCoordFormatter
 import pickle
 
+#
+# Prepare workspace
+#
 output_folder = './'
 
 genome_file = 'hg19.ra.fa'
@@ -39,7 +42,12 @@ try:
 except OSError:
     pass
 
-# set up figure
+#
+# Set up figure
+#
+# Note that this figure layout is particularly complex, and requires setting up panels on
+# a plotting grid. When you are not preparing publication-ready figures, all FAN-C API
+# plotting functions can be run without explicitly setting up matplotlib axes!
 matplotlib.rcParams.update({'font.size': 7})
 
 fig = plt.figure(figsize=(8, 8), dpi=300)
@@ -104,6 +112,10 @@ cax_dir_array = plt.subplot(gs[row_right5, col_right2])
 ax_dir = plt.subplot(gs[row_right6, col_right1])
 ax_genes = plt.subplot(gs[gene_row, col_right1])
 
+
+#
+# FAN-C plots
+#
 
 # 1. Hi-C square plot
 p_hic = fancplot.SquareMatrixPlot(hic_10kb, norm='lin', vmin=0.0, vmax=0.03, ax=ax_hic, cax=cax_hic,
@@ -306,5 +318,9 @@ ax_ctcf.set_xticks([triangular_plotting_region.start,
                    triangular_plotting_region.end])
 ax_ctcf.set_ylabel('CTCF occupancy\n(fold-enrichment\nover input)')
 
+
+#
+# Save figure to file
+#
 fig.savefig(os.path.join(output_folder, "figure3.png"))
 plt.close(fig)
