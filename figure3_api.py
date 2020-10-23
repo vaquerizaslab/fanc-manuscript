@@ -205,7 +205,7 @@ if not os.path.exists(tad_am_output_file):
 else:
     tad_am = fanc.AggregateMatrix(tad_am_output_file)
 
-fanc_stats_plot.aggregate_plot(tad_am, labels=None, vmin=-1, vmax=1,
+fanc_stats_plot.aggregate_plot(tad_am, labels=['', ''], vmin=-1, vmax=1,
                                oe=False, log=False, colormap='bwr', ax=ax_aggregate_tads,
                                relative_label_locations=(1/3, 2/3), plot_colorbar=False)
 
@@ -248,12 +248,12 @@ p_ins_array.colorbar.set_label('Insulation score')
 ax_ins_array.set_xticks([triangular_plotting_region.start,
                          triangular_plotting_region.center,
                          triangular_plotting_region.end])
-ax_ins_array.set_yticks([2, 10, 100])
-ax_ins_array.set_yticklabels(['20kb', '100kb', '1mb'])
+ax_ins_array.set_yticks([50000, 200000, 1000000])
+ax_ins_array.set_yticklabels(['50kb', '200kb', '1mb'])
 ax_ins_array.set_ylabel('Window\nsize (bp)')
 
 # 10. Insulation score
-insulation_single = insulation.score_regions(10)
+insulation_single = insulation.score_regions(100000)
 
 p_ins = fancplot.LinePlot(insulation_single, ax=ax_ins, style='mid', plot_kwargs={'color': '#79C7C5'},
                           draw_tick_legend=False, draw_minor_ticks=False)
@@ -278,6 +278,8 @@ p_dir_array.colorbar.set_label('Directionality index')
 ax_dir_array.set_xticks([triangular_plotting_region.start,
                          triangular_plotting_region.center,
                          triangular_plotting_region.end])
+ax_dir_array.set_yticks([50000, 200000, 1000000])
+ax_dir_array.set_yticklabels(['50kb', '200kb', '1mb'])
 ax_dir_array.set_ylabel('Window\nsize (bp)')
 
 # 12. Directionality score
@@ -322,5 +324,6 @@ ax_ctcf.set_ylabel('CTCF occupancy\n(fold-enrichment\nover input)')
 #
 # Save figure to file
 #
-fig.savefig(os.path.join(output_folder, "figure3.png"))
+#fig.savefig(os.path.join(output_folder, "figure3.png"))
+fig.savefig(os.path.join(output_folder, "figure3.pdf"))
 plt.close(fig)
